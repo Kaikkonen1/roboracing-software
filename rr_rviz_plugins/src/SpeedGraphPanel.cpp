@@ -5,24 +5,27 @@
 #include <pluginlib/class_list_macros.h>
 #include <rr_platform/chassis_state.h>
 
-
-
 namespace rr_rviz_plugins {
 
 SpeedGraphPanel::SpeedGraphPanel(QWidget *parent)
   : rviz::Panel(parent) // Base class constructor
 {
+    nSamples = 1000;
     currentAverage = 0;
-    nSamples = 5;
-    offsetX = 3;
+    offsetX = 100;
     offsetY = 0.5;
     axisXMin = 0;
     axisYMax = 0.0;
+    time = 0;
+    zeroTime = 0;
+    zeroTimeSet = false;
+    windowSize = 10000; //number of samples to follow
 
     nSamplesSpinner = new QSpinBox();
     nSamplesSpinner->setPrefix("# samples: ");
     nSamplesSpinner->setValue(nSamples);
     nSamplesSpinner->setMinimum(1);
+    nSamplesSpinner->setMaximum(20000);
     connect(nSamplesSpinner, SIGNAL(valueChanged(int)), this, SLOT(nSamplesSpinnerCallback(int)));
 
     currentSeries = new QLineSeries();
@@ -30,7 +33,7 @@ SpeedGraphPanel::SpeedGraphPanel(QWidget *parent)
     averageSeries = new QLineSeries();
     averageSeries->color() = "green";
     goalSpeedSeries = new QLineSeries();
-    goalSpeedSeries->color() = "#FF0000";
+    goalSpeedSeries->color() = "red";
     chart = new QChart();
     chart->legend()->hide();
     chart->addSeries(currentSeries);
@@ -77,31 +80,46 @@ SpeedGraphPanel::SpeedGraphPanel(QWidget *parent)
 }
 
 void SpeedGraphPanel::chassisCallback(const rr_platform::chassis_stateConstPtr &msg, QLineSeries *actualSpeedSeries) {
+    if (!zeroTimeSet) {
+        zeroTime = (msg->header.stamp.sec * 1000) + (msg->header.stamp.nsec / 1000000); //milliseconds
+        zeroTimeSet = true;
+    }
+
+    time = (msg->header.stamp.sec * 1000) + (msg->header.stamp.nsec / 1000000) - zeroTime; //milliseconds
+
+    //curent speed
+    if (msg->speed_mps > axisYMax) {
+        axisYMax = msg->speed_mps;
+        chart->axisY()->setRange(0, axisYMax + offsetY); //auto range speed
+    }
+
+    actualSpeedSeries->append(time, msg->speed_mps);
+
+    //average speed
     if (averageQueue.size() < nSamples) {
         averageQueue.push(msg->speed_mps);
         currentAverage = currentAverage + (msg->speed_mps - currentAverage) / averageQueue.size(); //calc incremental mean
     } else {
         //calc rolling mean
         double outValue = averageQueue.front();
-        averageQueue.pop();
         averageQueue.push(msg->speed_mps);
         currentAverage = currentAverage - outValue / nSamples + msg->speed_mps / nSamples;
+        averageQueue.pop();
     }
 
-    if (msg->speed_mps > axisYMax) {
-        axisYMax = msg->speed_mps;
-        chart->axisY()->setRange(0, axisYMax + offsetY); //auto range speed
-    }
-    axisXMax = msg->header.stamp.nsec;
-    actualSpeedSeries->append(axisXMax, msg->speed_mps); //graph speed (meters/sec) vs time (nsec)
-    averageSeries->append(axisXMax, currentAverage);
+    averageSeries->append(time, currentAverage);
     averageSpeedLabel->setText(("Avg: " + std::to_string(currentAverage) + " m/s").c_str());
-    chart->axisX()->setRange(axisXMin, axisXMax + offsetX); //auto range the time
+
+    if (autoscrollCheckbox->isChecked()) {
+        axisXMin = time - windowSize;
+    }
+
+    chart->axisX()->setRange(axisXMin, time + offsetX);
 
 }
 
 void SpeedGraphPanel::speedCallback(const rr_platform::speed::ConstPtr &msg) {
-    goalSpeedSeries->append(msg->header.stamp.nsec, msg->speed);
+    goalSpeedSeries->append((msg->header.stamp.sec * 1000) + (msg->header.stamp.nsec / 1000000) - zeroTime, msg->speed);
 }
 
 void SpeedGraphPanel::actualSpeedSeriesCheckboxCallback(bool checked) {
@@ -132,9 +150,9 @@ void SpeedGraphPanel::goalSpeedSeriesCheckboxCallback(bool checked) {
 
 void SpeedGraphPanel::autoscrollCallback() {
     if (autoscrollCheckbox->isChecked()) {
-        axisXMin = axisXMax - nSamples;
+        axisXMin = time - windowSize;
     } else {
-        axisXMin = 0.0;
+        axisXMin = 0;
     }
 }
 
