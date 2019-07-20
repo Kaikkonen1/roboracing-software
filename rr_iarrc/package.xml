@@ -37,6 +37,7 @@
   <run_depend>nodelet</run_depend>
 
   <export>
-      <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
+      <!--<nodelet plugin="${prefix}/color_detector_plugins.xml"/>-->
+      <nodelet plugin="${prefix}/lane_detector_plugins.xml"/>
   </export>
 </package>
