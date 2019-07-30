@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   laser_geometry
   image_transport
   message_generation
+  dynamic_reconfigure
 )
 
 find_package(OpenCV REQUIRED)
@@ -32,6 +33,10 @@ add_message_files(
 generate_messages(
     DEPENDENCIES
     std_msgs
+)
+
+generate_dynamic_reconfigure_options(
+        src/laplacian_line_detector/laplacian_line_detector.cfg
 )
 
 ###################################
@@ -60,7 +65,7 @@ add_subdirectory(src/finish_line_watcher)
 add_subdirectory(src/qualify)
 add_subdirectory(src/ol_reliable)
 add_subdirectory(src/hsv_tuner)
-add_subdirectory(src/laplacian_line_detection)
+add_subdirectory(src/laplacian_line_detector)
 add_subdirectory(src/drag_centerline_planner)
 add_subdirectory(src/cone_detection)
 add_subdirectory(src/urc_controller)

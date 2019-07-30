@@ -8,4 +8,4 @@ target_link_libraries(lane_detector ${catkin_LIBRARIES})
 target_link_libraries(lane_detector ${OpenCV_LIBS} )
 add_dependencies(lane_detector rr_platform_generate_messages_cpp)
 
-
+add_dependencies(lane_detector ${PROJECT_NAME}_gencfg)
