@@ -8,7 +8,7 @@
 
 namespace lane_detector {
 
-    void callback(rr_iarrc::laplacian_line_detectorConfig&, uint32_t);
+    void dynamic_callback(rr_iarrc::laplacian_line_detectorConfig&, uint32_t);
     void img_callback(const sensor_msgs::ImageConstPtr&);
     void calcRoiRects(const cv::Mat&);
     cv::Mat getBlurredGray(const cv::Mat&);
@@ -18,7 +18,7 @@ namespace lane_detector {
     cv::Mat cutSmall(const cv::Mat&);
     void blockBottom(const cv::Mat&);
     cv::Mat floodfillAreas(const cv::Mat&, const cv::Mat&);
-    cv::Mat createDebugImage(cv::Mat&, const cv::Mat&, const cv::Mat&, const cv::Mat&, const cv::Mat&);
+    cv::Mat createDebugImage(cv::Mat&, const cv::Mat&, const cv::Mat&, const cv::Mat&);
     cv::Mat overlayBinaryGreen(cv::Mat&, const cv::Mat&);
     cv::Mat kernel(int, int);
     void publishMessage(ros::Publisher&, const cv::Mat&, std::string, ros::Time&);
@@ -27,6 +27,7 @@ namespace lane_detector {
     int resize_hgt = 400;
     double hgt_resize_pct;
     cv::Rect lapl_ROI_rect, rel_adapt_ROI_rect, adapt_ROI_rect;
+    cv::Mat color_mask, gray_mask;
 
     int laplacian_threshold_min, laplacian_threshold_max, adaptive_mean_threshold, min_blob_area;
     bool ignore_adaptive;

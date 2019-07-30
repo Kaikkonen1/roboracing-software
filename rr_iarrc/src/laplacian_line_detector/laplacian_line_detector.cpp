@@ -9,23 +9,31 @@ using namespace std;
 
 namespace lane_detector {
 
-    double time_sum = 0.0;
-    int time_n = 0;
+    void dynamic_callback(rr_iarrc::laplacian_line_detectorConfig &config, uint32_t level) {
+        ROS_INFO("Reconfigure Request Occurred!");
+        laplacian_threshold_min = config.laplacian_threshold_min;
+        laplacian_threshold_max = config.laplacian_threshold_max;
+        adaptive_mean_threshold = config.adaptive_mean_threshold;
+        min_blob_area           = config.min_blob_area;
+        ignore_adaptive         = config.ignore_adaptive;
 
-    cv::Mat color_mask, gray_mask;
+        lapl_ROI_top            = config.lapl_ROI_top;
+        lapl_ROI_btm            = config.lapl_ROI_btm;
+        adapt_ROI_top           = config.adapt_ROI_top;
+        adapt_ROI_btm           = config.adapt_ROI_btm;
+        blockBumper_top         = config.blockBumper_top;
 
-    void callback(rr_iarrc::laplacian_line_detectorConfig &config, uint32_t level) {
-        ROS_INFO("Reconfigure Request: %d %f %s %s %d",
-                config.int_param,
-                config.double_param,
-                config.str_param.c_str(),
-                config.bool_param?"True":"False",
-                config.size);
+        color1_hsv_low = cv::Scalar( config.ignore_color1_H_low,  config.ignore_color1_S_low,  config.ignore_color1_V_low);
+        color1_hsv_high = cv::Scalar(config.ignore_color1_H_high, config.ignore_color1_S_high, config.ignore_color1_V_high);
+
+        color2_hsv_low = cv::Scalar( config.ignore_color2_H_low,  config.ignore_color2_S_low,  config.ignore_color2_V_low);
+        color2_hsv_high = cv::Scalar(config.ignore_color2_H_high, config.ignore_color2_S_high, config.ignore_color2_V_high);
+
+        gray_threshold = config.ignore_gray_threshold;
     }
 
     void img_callback(const sensor_msgs::ImageConstPtr& msg) {
         //Convert msg to Mat image
-        ros::Time start = ros::Time::now();
         cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
         cv::Mat frame = cv_ptr->image;
         auto time_stamp = msg->header.stamp;
@@ -57,15 +65,9 @@ namespace lane_detector {
 
         //Floodfill
         cv::Mat true_lines = floodfillAreas(lapl, adapt);
-
-        cv::Mat img_debug = createDebugImage(frame, lapl, adapt, blobs_adapt_ROI, gray_mask);
-
         cv::resize(true_lines, true_lines, orig_size);
 
-        ros::Time time_done = ros::Time::now();
-        time_sum += (time_done - start).toSec();
-        time_n++;
-        printf("FULL: %f , TimeAvg: %f \n", (time_done - start).toSec(), (time_sum / time_n));
+        cv::Mat img_debug = createDebugImage(frame, lapl, adapt, adapt_adapt_ROI);
 
         publishMessage(pub_line_detector, true_lines, "mono8", time_stamp);
         publishMessage(pub_debug_img, img_debug, "bgr8", time_stamp);
@@ -162,7 +164,7 @@ namespace lane_detector {
     }
 
     cv::Mat createDebugImage(cv::Mat &img_debug, const cv::Mat &lapl, const cv::Mat &adapt,
-                             const cv::Mat &blobs_adapt_ROI, const cv::Mat &gray_block) {
+            const cv::Mat &adapt_adapt_ROI) {
         if (pub_debug_img.getNumSubscribers() > 0) {
             //Get 3-channel gray img
             cv::cvtColor(img_debug, img_debug, CV_BGR2GRAY);
@@ -238,10 +240,10 @@ namespace lane_detector {
         pnh.param("ignore_adaptive", ignore_adaptive, false);
 
         pnh.param("lapl_ROI_top",    lapl_ROI_top, 500);
-        pnh.param("lapl_ROI_bottom", lapl_ROI_btm, 860);
+        pnh.param("lapl_ROI_btm", lapl_ROI_btm, 860);
 
         pnh.param("adapt_ROI_top", adapt_ROI_top, 550);
-        pnh.param("adapt_ROI_bottom", adapt_ROI_btm, 750);
+        pnh.param("adapt_ROI_btm", adapt_ROI_btm, 750);
 
         pnh.param("blockBumper_top", blockBumper_top, 800);
 
@@ -267,7 +269,7 @@ namespace lane_detector {
         pnh.param("ignore_gray_threshold", gray_threshold, -1);
 
         string subscription_node, detection_node, debug_node;
-        pnh.param("subscription_node", subscription_node, string("/camera_center/image_color_rect"));
+        pnh.param("subscription_node", subscription_node, string("image_color_rect"));
         pnh.param("publish_detection_node", detection_node, string("lines/detection_img"));
         pnh.param("publish_debug_node", debug_node, string("lines/debug_img"));
 
@@ -279,7 +281,7 @@ namespace lane_detector {
         dynamic_reconfigure::Server<rr_iarrc::laplacian_line_detectorConfig> server;
         dynamic_reconfigure::Server<rr_iarrc::laplacian_line_detectorConfig>::CallbackType f;
 
-        f = boost::bind(&callback, _1, _2);
+        f = boost::bind(&dynamic_callback, _1, _2);
         server.setCallback(f);
 
         ROS_INFO_STREAM("Lane detector ready! Subscribed to " << subscription_node);
