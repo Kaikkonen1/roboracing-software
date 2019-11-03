@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include "PID.h"
+#include <std_msgs/Float64.h>
 
 using namespace std;
 typedef cv::Mat Mat;
@@ -34,12 +34,13 @@ Line last_midline;
 
 Point anchor;
 
-// PID IMPLEMENTATION SETUP
-double kP, kI, kD;
-double setpoint;
-double input, maxTurnLimit;
-double outputSteering, speedGoal;
-PID myPID(&input, &outputSteering, &setpoint, 0.0, 0.0, 0.0, P_ON_E, REVERSE);
+double input, maxTurnLimit, speedGoal;
+
+ros::Publisher setpoint_pub;
+ros::Publisher state_pub;
+
+std_msgs::Float64 setpoint_msg;
+std_msgs::Float64 state_msg;
 
 cv::Mat kernel(int x, int y) {
     return cv::getStructuringElement(cv::MORPH_RECT, cv::Size(x, y));
@@ -178,27 +179,51 @@ Mat make_debug_img(const Mat& frame, const Contour& left_cnt, const Contour& rig
     return debug_img;
 }
 
+Mat frame;
+tuple<Contour, Contour> contours;
+tuple<Line, Line> lines;
+Line midline;
+
 void img_callback(const sensor_msgs::ImageConstPtr& msg) {
     // Convert msg to Mat image
     cv_ptr = cv_bridge::toCvCopy(msg, "mono8");
-    Mat frame = cv_ptr->image;
-    ;
+    frame = cv_ptr->image;
 
     img_height = frame.rows;
     img_width = frame.cols;
     anchor = Point(img_width / 2, img_height - 10);
 
-    auto [left_cnt, right_cnt] = get_side_contours(frame);
-    auto [left_line, right_line] = get_cnts_reg_line(left_cnt, right_cnt);
-    Line midline = get_midline(left_line, right_line);
+    contours = get_side_contours(frame);
+    auto [left_cnt, right_cnt] = contours;
+
+    lines = get_cnts_reg_line(left_cnt, right_cnt);
+    auto [left_line, right_line] = lines;
+
+    midline = get_midline(left_line, right_line);
 
     cv::Point goal(get_pnt_on_line(img_height / 2, midline), img_height / 2);
-    ;
 
-    input = static_cast<double>(goal.x);
-    setpoint = img_width / 2;
-    myPID.Compute();
-    double steering = outputSteering;
+    setpoint_msg.data = img_width / 2;
+    setpoint_pub.publish(setpoint_msg);
+
+    state_msg.data = static_cast<double>(goal.x);
+    state_pub.publish(state_msg);
+}
+
+double clamp_steering(double steering) {
+    if (steering > maxTurnLimit) {
+        return maxTurnLimit;
+    } else if (steering < -maxTurnLimit) {
+        return -maxTurnLimit;
+    }
+
+    return steering;
+}
+
+void control_effort_callback(const std_msgs::Float64 msg) {
+    double steering = clamp_steering(msg.data);
+    auto [left_cnt, right_cnt] = contours;
+    auto [left_line, right_line] = lines;
 
     Mat debug_img = make_debug_img(frame, left_cnt, right_cnt, left_line, right_line, midline, steering);
 
@@ -218,23 +243,20 @@ int main(int argc, char** argv) {
     std::string subscription_node;
     nhp.param("subscription_node", subscription_node, std::string("/camera_center/lines/detection_img_transformed"));
 
-    nhp.param("PID_kP", kP, 0.0001);
-    nhp.param("PID_kI", kI, 0.0);
-    nhp.param("PID_kD", kD, 0.0);
     nhp.param("speed", speedGoal, 1.0);
 
     nhp.param("maxTurnLimitRadians", maxTurnLimit, 0.44);
-
-    // setup PID controllers
-    myPID.SetTunings(kP, kI, kD);
-    myPID.SetMode(AUTOMATIC);
-    myPID.SetOutputLimits(-maxTurnLimit, maxTurnLimit);
 
     auto img_real = nh.subscribe(subscription_node, 1, img_callback);
 
     pub_line_detector = nh.advertise<sensor_msgs::Image>("/drag_centerline_debug", 1);  // test publish of image
     speed_pub = nh.advertise<rr_msgs::speed>("/plan/speed", 1);
     steer_pub = nh.advertise<rr_msgs::steering>("/plan/steering", 1);
+
+    nh.subscribe("/contours_pid/control_effort", 1, control_effort_callback);
+
+    state_pub = nh.advertise<std_msgs::Float64>("/contours_pid/state", 1);
+    setpoint_pub = nh.advertise<std_msgs::Float64>("/contours_pid/setpoint", 1);
 
     ros::spin();
     return 0;

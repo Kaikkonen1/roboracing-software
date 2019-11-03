@@ -9,8 +9,7 @@
 
 #include <rr_msgs/speed.h>
 #include <rr_msgs/steering.h>
-
-#include "PID.h"
+#include <std_msgs/Float64.h>
 
 using namespace std;
 
@@ -18,17 +17,17 @@ ros::Publisher pub_line_detector;
 ros::Publisher speed_pub;
 ros::Publisher steer_pub;
 
+ros::Publisher setpoint_pub;
+ros::Publisher state_pub;
+
 rr_msgs::speed speed_message;
 rr_msgs::steering steer_message;
 
-// PID IMPLEMENATION SETUP
-double kP;
-double kI;
-double kD;
-double setpoint;
+std_msgs::Float64 setpoint_msg;
+std_msgs::Float64 state_msg;
+
 double input;
-double outputSteering;
-PID myPID(&input, &outputSteering, &setpoint, 0.0, 0.0, 0.0, P_ON_E, REVERSE);
+double maxTurnLimit;
 
 double speedGoal;
 bool useHistogramFinder;
@@ -83,18 +82,23 @@ std::vector<cv::Point> createCenterLine(std::vector<cv::Point> leftLine, std::ve
     return centerLine;
 }
 
+// data we save while waiting for PID output
+cv::Mat output;
+cv::Mat frame;
+cv::Point goal;
+cv_bridge::CvImagePtr cv_ptr;
+
 /**
  * Use histogram to find start of lines, then use sliding window to track line
  */
 void img_callback(const sensor_msgs::ImageConstPtr& msg) {
     // Convert msg to Mat image
-    cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "mono8");
-    cv::Mat frame = cv_ptr->image;
-    cv::Mat output;
+    cv_ptr = cv_bridge::toCvCopy(msg, "mono8");
+    frame = cv_ptr->image;
     cv::cvtColor(frame, output,
                  cv::COLOR_GRAY2BGR);  // Doing this just for debugging
 
-    setpoint = frame.cols / 2;  // want our center line on the center of the camera
+    double setpoint = frame.cols / 2;  // want our center line on the center of the camera
     cv::Point rightMaxLoc;
     cv::Point leftMaxLoc;
 
@@ -177,13 +181,32 @@ void img_callback(const sensor_msgs::ImageConstPtr& msg) {
     cv::polylines(output, centerLane, false, cv::Scalar(255, 0, 0), 2);
 
     // find error, P term. Maybe add curvature and stuff
-    cv::Point goal = centerLane[centerLane.size() / 2];
-    int error = (frame.cols / 2) - goal.x;
+    goal = centerLane[centerLane.size() / 2];
+    // int error = (frame.cols / 2) - goal.x;
 
     // double steering = error * 0.01; //kP
     input = static_cast<double>(goal.x);
-    myPID.Compute();
-    double steering = outputSteering;
+
+    // publish to the PID controller
+    setpoint_msg.data = setpoint;
+    setpoint_pub.publish(setpoint_msg);
+
+    state_msg.data = input;
+    state_pub.publish(state_msg);
+}
+
+double clamp_steering(double steering) {
+    if (steering > maxTurnLimit) {
+        return maxTurnLimit;
+    } else if (steering < -maxTurnLimit) {
+        return -maxTurnLimit;
+    }
+
+    return steering;
+}
+
+void control_effort_callback(const std_msgs::Float64 msg) {
+    double steering = clamp_steering(msg.data);
 
     // debug visualization
     cv::putText(output, std::to_string(steering), cv::Point(20, 100), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 255, 0),
@@ -213,23 +236,17 @@ int main(int argc, char** argv) {
     ros::NodeHandle nh;
     ros::NodeHandle nhp("~");
     std::string subscription_node;
+
     nhp.param("subscription_node", subscription_node,
               std::string("/camera_center/image_color_rect/lines/detection_img_transformed"));
-
-    nhp.param("PID_kP", kP, 0.0001);
-    nhp.param("PID_kI", kI, 0.0);
-    nhp.param("PID_kD", kD, 0.0);
     nhp.param("speed", speedGoal, 1.0);
-
     nhp.param("useHistogramFinder", useHistogramFinder, false);
-
-    double maxTurnLimit;
     nhp.param("maxTurnLimitRadians", maxTurnLimit, 0.44);
 
-    // setup PID controllers
-    myPID.SetTunings(kP, kI, kD);
-    myPID.SetMode(AUTOMATIC);
-    myPID.SetOutputLimits(-maxTurnLimit, maxTurnLimit);
+    nh.subscribe("/center_pid/control_effort", 1, control_effort_callback);
+
+    setpoint_pub = nh.advertise<std_msgs::Float64>("/center_pid/setpoint", 1);
+    state_pub = nh.advertise<std_msgs::Float64>("/center_pid/state", 1);
 
     pub_line_detector = nh.advertise<sensor_msgs::Image>("/drag_centerline_track", 1);  // test publish of image
     auto img_real = nh.subscribe(subscription_node, 1, img_callback);

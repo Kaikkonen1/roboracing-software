@@ -1,5 +1,3 @@
-add_library(PID PID.h PID.cpp)
-
 add_executable(drag_centerline_planner drag_centerline_planner.cpp)
 target_link_libraries(drag_centerline_planner PID ${catkin_LIBRARIES} ${OpenCV_LIBS})
 

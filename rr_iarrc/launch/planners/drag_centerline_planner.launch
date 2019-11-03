@@ -1,10 +1,5 @@
 <launch>
     <node name="drag_centerline_planner" pkg="rr_iarrc" type="drag_centerline_planner" output="screen">
-        <!--PID Controller Constants-->
-        <param name="PID_kP" type="double" value="0.002" /> <!-- 0.004 @ 4, 0.003 @ 6 -->
-        <param name="PID_kI" type="double" value="0.0" />
-        <param name="PID_kD" type="double" value="0.0005" /> <!-- 0.0005 @ 4 -->
-
         <param name="speed" type="double" value="9.0" /> <!-- 3.1-->
 
         <param name="useHistogramFinder" type="bool" value="false" />
@@ -12,5 +7,15 @@
         <param name="maxTurnLimitRadians" type="double" value="0.16" />
 
         <param name="subscription_node" type="string" value="/camera_center/lines/detection_img_transformed"/>
+    </node>
+
+    <node name="drag_centerline_planner_pid" pkg="pid" type="controller">
+        <param name="Kp" value="0.002" />
+        <param name="Ki" value="0.0" />
+        <param name="Kd" value="0.0005" />
+
+        <param name="topic_from_controller" value="/center_pid/control_effort" />
+        <param name="topic_from_plant" value="/center_pid/state" />
+        <param name="setpoint_topic" value="/center_pid/setpoint" />
     </node>
 </launch>
