@@ -243,10 +243,15 @@ int main(int argc, char** argv) {
     nhp.param("useHistogramFinder", useHistogramFinder, false);
     nhp.param("maxTurnLimitRadians", maxTurnLimit, 0.44);
 
-    nh.subscribe("/center_pid/control_effort", 1, control_effort_callback);
+    std::string control_topic, setpoint_topic, state_topic;
+    nhp.param("control_topic", control_topic, std::string("/center_pid/control_effort"));
+    nhp.param("setpoint_topic", setpoint_topic, std::string("/center_pid/setpoint"));
+    nhp.param("state_topic", state_topic, std::string("/center_pid/state"));
 
-    setpoint_pub = nh.advertise<std_msgs::Float64>("/center_pid/setpoint", 1);
-    state_pub = nh.advertise<std_msgs::Float64>("/center_pid/state", 1);
+    nh.subscribe(control_topic, 1, control_effort_callback);
+
+    setpoint_pub = nh.advertise<std_msgs::Float64>(setpoint_topic, 1);
+    state_pub = nh.advertise<std_msgs::Float64>(state_topic, 1);
 
     pub_line_detector = nh.advertise<sensor_msgs::Image>("/drag_centerline_track", 1);  // test publish of image
     auto img_real = nh.subscribe(subscription_node, 1, img_callback);

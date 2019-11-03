@@ -253,10 +253,15 @@ int main(int argc, char** argv) {
     speed_pub = nh.advertise<rr_msgs::speed>("/plan/speed", 1);
     steer_pub = nh.advertise<rr_msgs::steering>("/plan/steering", 1);
 
-    nh.subscribe("/contours_pid/control_effort", 1, control_effort_callback);
+    std::string control_topic, setpoint_topic, state_topic;
+    nhp.param("control_topic", control_topic, std::string("/contours_pid/control_effort"));
+    nhp.param("setpoint_topic", setpoint_topic, std::string("/contours_pid/setpoint"));
+    nhp.param("state_topic", state_topic, std::string("/contours_pid/state"));
 
-    state_pub = nh.advertise<std_msgs::Float64>("/contours_pid/state", 1);
-    setpoint_pub = nh.advertise<std_msgs::Float64>("/contours_pid/setpoint", 1);
+    nh.subscribe(control_topic, 1, control_effort_callback);
+
+    state_pub = nh.advertise<std_msgs::Float64>(state_topic, 1);
+    setpoint_pub = nh.advertise<std_msgs::Float64>(setpoint_topic, 1);
 
     ros::spin();
     return 0;

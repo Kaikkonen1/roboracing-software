@@ -7,6 +7,11 @@
         <param name="maxTurnLimitRadians" type="double" value="0.16" />
 
         <param name="subscription_node" type="string" value="/camera_center/lines/detection_img_transformed"/>
+
+        <!-- make sure these match with below -->
+        <param name="control_topic" value="/center_pid/control_effort" />
+        <param name="state_topic" value="/center_pid/state" />
+        <param name="setpoint_topic" value="/center_pid/setpoint" />
     </node>
 
     <node name="drag_centerline_planner_pid" pkg="pid" type="controller">

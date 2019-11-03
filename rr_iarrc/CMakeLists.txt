@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
         pcl_ros
         image_transport
         rr_msgs
+        pid
         )
 
 find_package(OpenCV REQUIRED)

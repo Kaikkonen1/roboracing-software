@@ -1,10 +1,5 @@
 <launch>
     <node name="drag_centerline_planner" pkg="rr_iarrc" type="drag_centerline_planner" output="screen">
-        <!--PID Controller Constants-->
-        <param name="PID_kP" type="double" value="0.004" />
-        <param name="PID_kI" type="double" value="0.0" />
-        <param name="PID_kD" type="double" value="0.0013" />
-
         <param name="speed" type="double" value="1.9" /> <!-- 3.1-->
 
         <param name="useHistogramFinder" type="bool" value="true" />
@@ -12,5 +7,20 @@
         <param name="maxTurnLimitRadians" type="double" value="0.16" />
 
         <param name="subscription_node" type="string" value="/urc_side_lanes"/>
+
+        <!-- make sure these match with below -->
+        <param name="control_topic" value="/urc_center_pid/control_effort" />
+        <param name="state_topic" value="/urc_center_pid/state" />
+        <param name="setpoint_topic" value="/urc_center_pid/setpoint" />
+    </node>
+
+    <node name="drag_centerline_planner_pid" pkg="pid" type="controller">
+        <param name="Kp" value="0.004" />
+        <param name="Ki" value="0.0" />
+        <param name="Kd" value="0.0013" />
+
+        <param name="topic_from_controller" value="/urc_center_pid/control_effort" />
+        <param name="topic_from_plant" value="/urc_center_pid/state" />
+        <param name="setpoint_topic" value="/urc_center_pid/setpoint" />
     </node>
 </launch>
