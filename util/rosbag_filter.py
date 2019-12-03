@@ -20,6 +20,7 @@ def main():
     compression = args.compress
     only_moving = args.only_moving
     exclude_estop = args.exclude_estop
+    use_index = []
 
     bag = rosbag.Bag(args.in_bag, 'r')
     filtered_bag = rosbag.Bag(file_path[0:file_path.rfind('.bag')] + '_filter.bag', 'w')
@@ -30,14 +31,20 @@ def main():
     print(bag)
 
     for topic, message, t in bag.read_messages(topics=['/chassis_state']):
-        if not (message.header.stamp.secs <= start_time + bag.get_start_time()
-                or message.header.stamp.secs >= end_time + bag.get_start_time()
-                or message.estop_on == False and exclude_estop
-                or message.speed_mps != 0 and only_moving):
+        print not (message.estop_on == True and exclude_estop)
 
+        use_index.append(
+            start_time + bag.get_start_time() <= message.header.stamp.secs <= end_time + bag.get_start_time()
+            and not (message.estop_on == True and exclude_estop)
+            and not (message.speed_mps == 0 and only_moving))
 
-    for writeTopic, writeMessage, writeTime in bag.read_messages():
-        filtered_bag.write(topic=writeTopic, msg=writeMessage, t=writeTime)
+    count = 0
+
+    for write_topic, write_message, write_t in bag.read_messages():
+        if use_index[count]:
+            filtered_bag.write(topic=write_topic, msg=write_message, t=write_t)
+        if write_topic == "/tf":
+            count += 1
 
     bag.close()
     filtered_bag.close()
