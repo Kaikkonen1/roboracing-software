@@ -1,4 +1,7 @@
 <launch>
+    <arg name="topic_from_controller" value="/urc_center_pid/control_effort"/>
+    <arg name="topic_from_plant" value="/urc_center_pid/state"/>
+    <arg name="setpoint_topic" value="/urc_center_pid/setpoint"/>
     <node name="drag_centerline_planner" pkg="rr_iarrc" type="drag_centerline_planner" output="screen">
         <param name="speed" type="double" value="1.9" /> <!-- 3.1-->
 
@@ -8,10 +11,9 @@
 
         <param name="subscription_node" type="string" value="/urc_side_lanes"/>
 
-        <!-- make sure these match with below -->
-        <param name="control_topic" value="/urc_center_pid/control_effort" />
-        <param name="state_topic" value="/urc_center_pid/state" />
-        <param name="setpoint_topic" value="/urc_center_pid/setpoint" />
+        <param name="control_topic" value="$(arg topic_from_controller)" />
+        <param name="state_topic" value="$(arg topic_from_plant)" />
+        <param name="setpoint_topic" value="$(arg setpoint_topic)" />
     </node>
 
     <node name="drag_centerline_planner_pid" pkg="pid" type="controller">
@@ -19,8 +21,8 @@
         <param name="Ki" value="0.0" />
         <param name="Kd" value="0.0013" />
 
-        <param name="topic_from_controller" value="/urc_center_pid/control_effort" />
-        <param name="topic_from_plant" value="/urc_center_pid/state" />
-        <param name="setpoint_topic" value="/urc_center_pid/setpoint" />
+        <param name="topic_from_controller" value="$(arg topic_from_controller)"/>
+        <param name="topic_from_plant" value="$(arg topic_from_plant)" />
+        <param name="setpoint_topic" value="$(arg setpoint_topic)" />
     </node>
 </launch>
