@@ -30,25 +30,52 @@ def main():
 
     print(bag)
 
-    for topic, message, t in bag.read_messages(topics=['/chassis_state']):
-        print not (message.estop_on == True and exclude_estop)
+    #for topic, message, t in bag.read_messages(topics=['/chassis_state', '/imu/data_raw']):
+    #    if topic == '/chassis_state':
+    #        use_index.append(
+    #            start_time + bag.get_start_time() <= message.header.stamp.secs <= end_time + bag.get_start_time()
+    #            and not (message.estop_on == True and exclude_estop)
+    #        )
+    #    elif topic == '/imu/data_raw':
+    #        if only_moving:
+    #            use_index.append(
+    #                not (abs(message.angular_velocity.x) < 5 and abs(message.angular_velocity.y) < 5 and abs(message.angular_velocity.z) < 5)
+    #            )
 
-        use_index.append(
-            start_time + bag.get_start_time() <= message.header.stamp.secs <= end_time + bag.get_start_time()
-            and not (message.estop_on == True and exclude_estop)
-            and not (message.speed_mps == 0 and only_moving))
+    for topic, message, t in bag.read_messages(topics=['/chassis_state', '/imu/data_raw']):
+        if topic == '/chassis_state':
+            use_index.append([start_time + bag.get_start_time() <= message.header.stamp.secs <= end_time + bag.get_start_time()
+                              and not (message.estop_on == True and exclude_estop), float(str(message.header.stamp.secs) + '.' + str(message.header.stamp.nsecs))])
+        elif topic == '/imu/data_raw':
+            use_index.append([only_moving and not (abs(message.angular_velocity.x) < 5 and abs(message.angular_velocity.y) < 5 and abs(message.angular_velocity.z) < 5),
+                              float(str(message.header.stamp.secs) + '.' + str(message.header.stamp.nsecs))])
 
-    count = 0
+    #count = 0
 
+    #for write_topic, write_message, write_t in bag.read_messages():
+    #    if use_index[count]:
+    #        filtered_bag.write(topic=write_topic, msg=write_message, t=write_t)
+    #    if write_topic == "/tf":
+    #        count += 1
+    print use_index
     for write_topic, write_message, write_t in bag.read_messages():
-        if use_index[count]:
-            filtered_bag.write(topic=write_topic, msg=write_message, t=write_t)
         if write_topic == "/tf":
-            count += 1
+            write_message = write_message.transforms[0]
+        print float(str(write_message.header.stamp.secs) + '.' + str(write_message.header.stamp.nsecs))
+        if is_within_times(write_message.header.stamp, use_index):
+            filtered_bag.write(topic=write_topic, msg=write_message, t=write_t)
 
     bag.close()
     filtered_bag.close()
 
+
+def is_within_times(stamp, use_index):
+    for i in range(len(use_index) - 2):
+        if (use_index[i][0] or use_index[i + 1][0]) and use_index[i][1] < float(str(stamp.secs) + '.' + str(stamp.nsecs)) < use_index[i + 1][1] and (use_index[i + 1][1] - use_index[i][1]) < 0.1:
+            return True
+    return False
+
+# and\ use_index[i][0] < float(str(stamp.secs) + '.' + str(stamp.nsecs)) < use_index[i + 1][0] and (use_index[i + 1][0] - use_index[i][0]) < 0.1
 
 if __name__ == "__main__":
     main()
