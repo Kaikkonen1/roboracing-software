@@ -118,8 +118,10 @@ int main(int argc, char** argv) {
             ROS_ERROR_STREAM("[Motor Relay] Connection closed by server");
             ros::shutdown();
         }
-
-        double currentSpeed = std::stof(messageToData(driveBuffer));
+        std::string test = std::string(driveBuffer.begin(), driveBuffer.end());//messageToData(driveBuffer);
+        ROS_INFO_STREAM(test);
+        double currentSpeed = 0;
+        //double currentSpeed = std::stof(messageToData(driveBuffer));
 
         rr_msgs::chassis_state chassisStateMsg;
         chassisStateMsg.header.stamp = ros::Time::now();
