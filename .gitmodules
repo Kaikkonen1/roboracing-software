@@ -10,3 +10,6 @@
 [submodule "third_party/velodyne"]
 	path = third_party/velodyne
 	url = https://github.com/ros-drivers/velodyne.git
+[submodule "third_party/apriltag_ros"]
+	path = third_party/apriltag_ros
+	url = https://github.com/AprilRobotics/apriltag_ros.git

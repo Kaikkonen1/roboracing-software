@@ -1,0 +1,7 @@
+<launch>
+	<include file="$(find apriltag_ros)/launch/continuous_detection.launch">
+		<arg name="camera_name" value="/camera_center" />
+		<arg name="camera_frame" value="camera" />
+		<arg name="image_topic" value="image_color_rect" />
+	</include>
+</launch>
