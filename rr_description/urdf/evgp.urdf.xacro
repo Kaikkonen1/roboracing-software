@@ -111,7 +111,7 @@
     </link>
     <xacro:set_link_color link="camera" color="Gold"/>
 
-    <link name="imu_link">
+    <link name="imu_top_link">
         <xacro:null_inertia/>
         <visual>
             <geometry>
@@ -119,7 +119,7 @@
             </geometry>
         </visual>
     </link>
-    <xacro:set_link_color link="imu_link" color="Gold"/>
+    <xacro:set_link_color link="imu_top_link" color="Gold"/>
 
 
     <!-- ************************** Joints *************************** -->
@@ -163,19 +163,19 @@
     <joint name="base_footprint_to_lidar" type="fixed">
         <parent link="base_footprint"/>
         <child link="lidar"/>
-        <origin xyz="1.2 0 0.18" rpy="0 0 0"/>
+        <origin xyz="1.1684 0 0.2286" rpy="0 0 0"/>
     </joint>
 
     <joint name="base_footprint_to_gps" type="fixed">
         <parent link="base_footprint"/>
         <child link="gps_link"/>
-        <origin xyz="0.5 0.5 0.1" rpy="0 0 0"/>
+        <origin xyz="0.4318 0.5588 1.27" rpy="0 0 0"/>
     </joint>
 
     <joint name="base_footprint_to_camera" type="fixed">
         <parent link="base_footprint"/>
         <child link="camera"/>
-        <origin xyz="0.1 0 0.7" rpy="0 0.2 0"/>
+        <origin xyz="0.4318 0.5588 1.0922" rpy="0 0.2 0"/>
     </joint>
 
     <xacro:macro name="camera_optical_frame" params="camera_link">
@@ -191,10 +191,10 @@
 
     <xacro:camera_optical_frame camera_link="camera"/>
 
-    <joint name="base_footprint_to_imu" type="fixed">
+    <joint name="base_footprint_to_imu_top" type="fixed">
         <parent link="base_footprint"/>
-        <child link="imu_link"/>
-        <origin xyz="0.75 0.5 0.1" rpy="0 0 0"/>
+        <child link="imu_top_link"/>
+        <origin xyz="0.4318 0.5588 0.9906" rpy="0 0 0"/>
     </joint>
 
 
@@ -272,21 +272,21 @@
 <!--    </gazebo>-->
 
     <!-- IMU -->
-    <gazebo reference="imu_link">
+    <gazebo reference="imu_top_link">
         <gravity>true</gravity>
-        <sensor name="imu_sensor" type="imu">
+        <sensor name="imu_top_sensor" type="imu">
             <always_on>true</always_on>
             <update_rate>100</update_rate>
             <visualize>true</visualize>
             <topic>__default_topic__</topic>
             <plugin filename="libgazebo_ros_imu_sensor.so" name="imu_plugin">
-                <topicName>imu</topicName>
-                <bodyName>imu_link</bodyName>
+                <topicName>imu_top</topicName>
+                <bodyName>imu_top_link</bodyName>
                 <updateRateHZ>20.0</updateRateHZ>
                 <gaussianNoise>0.005</gaussianNoise>
                 <xyzOffset>0 0 0</xyzOffset>
                 <rpyOffset>0 0 0</rpyOffset>
-                <frameName>imu_link</frameName>
+                <frameName>imu_top_link</frameName>
             </plugin>
             <pose>0 0 0 0 0 0</pose>
         </sensor>
