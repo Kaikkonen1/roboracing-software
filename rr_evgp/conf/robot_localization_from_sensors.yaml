@@ -16,7 +16,7 @@ transform_timeout: 10.0
 odom0: /odometry/encoder
 odom0_config: [false, false, false,
                false, false, false,
-               true, true, false,
+               false, true, false,  # Note, when encoder is working this should be T, T, F
                false, false, false,
                false, false, false]
 odom0_queue_size: 100
@@ -36,8 +36,8 @@ odom1_relative: false
 
 #TODO: possibly add data from pole IMU as well.
 #IMU give absolute heading, rotational velocity, and linear velocity.
-imu0: /imu_bottom
-imu0_config: [false, false, false,
+imu0: /imu_top
+imu0_config: [ false, false, false,
                false, false, true,
                false, false, false,
                false, false, true,

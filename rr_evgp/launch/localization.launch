@@ -23,7 +23,7 @@
         <param name="wait_for_datum" value="false"/>
 
         <remap from="/imu/data" to="/imu_top"/>
-        <remap from="/gps/fix" to="/gps/fix"/>
+        <remap from="/gps/fix" to="/piksi/navsatfix_best_fix"/>
         <remap from="/odometry/filtered" to="/odometry/filtered"/>
     </node>
 
