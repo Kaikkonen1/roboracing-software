@@ -60,7 +60,7 @@ public:
   read a message from the TCP connections
   @return a char array of the characters read
   */
-  size_t readMessage(boost::array<char, 128> buf);
+  size_t readMessage(boost::array<char, 128> &buf);
 
   /**
   Getter for IP address

@@ -51,7 +51,7 @@ size_t rr::EthernetSocket::readMessage(unsigned char (&buffer)[256])
   return len;
 }
 
-size_t rr::EthernetSocket::readMessage(boost::array<char, 128> buf)
+size_t rr::EthernetSocket::readMessage(boost::array<char, 128> &buf)
 {
   // read data from TCP connection
   boost::system::error_code error;

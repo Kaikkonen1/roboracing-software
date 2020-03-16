@@ -33,7 +33,7 @@ double speed = 0.0;
 double steeringAngle = 0.0;
 
 std::unique_ptr<rr::EthernetSocket> driveBoardSocket;
-std::unique_ptr<rr::EthernetSocket> steeringBoardSocket;
+//std::unique_ptr<rr::EthernetSocket> steeringBoardSocket;
 
 void speedCallback(const rr_msgs::speed::ConstPtr& msg) {
     speed = msg->speed;
@@ -118,9 +118,9 @@ int main(int argc, char** argv) {
             ROS_ERROR_STREAM("[Motor Relay] Connection closed by server");
             ros::shutdown();
         }
-        std::string test = std::string(driveBuffer.begin(), driveBuffer.end());//messageToData(driveBuffer);
-        ROS_INFO_STREAM(test);
-        double currentSpeed = 0;
+        std::string reading(driveBuffer.begin() + 1, driveBuffer.begin() + nDrive - 1);
+        ROS_INFO_STREAM(reading);
+        double currentSpeed = std::stod(reading);
         //double currentSpeed = std::stof(messageToData(driveBuffer));
 
         rr_msgs::chassis_state chassisStateMsg;
