@@ -30,18 +30,6 @@ def main():
 
     print(bag)
 
-    #for topic, message, t in bag.read_messages(topics=['/chassis_state', '/imu/data_raw']):
-    #    if topic == '/chassis_state':
-    #        use_index.append(
-    #            start_time + bag.get_start_time() <= message.header.stamp.secs <= end_time + bag.get_start_time()
-    #            and not (message.estop_on == True and exclude_estop)
-    #        )
-    #    elif topic == '/imu/data_raw':
-    #        if only_moving:
-    #            use_index.append(
-    #                not (abs(message.angular_velocity.x) < 5 and abs(message.angular_velocity.y) < 5 and abs(message.angular_velocity.z) < 5)
-    #            )
-
     for topic, message, t in bag.read_messages(topics=['/chassis_state', '/imu/data_raw']):
         if topic == '/chassis_state':
             use_index.append([start_time + bag.get_start_time() <= message.header.stamp.secs <= end_time + bag.get_start_time()
