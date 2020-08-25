@@ -6,8 +6,8 @@ import argparse
 def main():
     parser = argparse.ArgumentParser(description='Filter rosbag files.')
     parser.add_argument("--in-bag", type=str, required=True, help="Bag file this is in")
-    parser.add_argument("--start-time", type=long, required=False, default=0, help="Excludes messages before this time")
-    parser.add_argument("--end-time", type=long, required=False, default=None, help="Excludes messages after this time")
+    parser.add_argument("--start-time", type=int, required=False, default=0, help="Excludes messages before this time")
+    parser.add_argument("--end-time", type=int, required=False, default=None, help="Excludes messages after this time")
     parser.add_argument("--exclude-estop", type=bool, required=False, default=False, help="Excludes messages if in estop mode")
     parser.add_argument("--only-moving", type=bool, required=False, default=False, help="Excludes messages if chassis is not moving")
     parser.add_argument("--compress", type=bool, required=False, default=False, help="Creates a compressed archive of a bag file")
