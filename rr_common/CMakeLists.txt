@@ -20,6 +20,20 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(OpenCV REQUIRED)
 
+##########################
+## dynamic reconfigure  ##
+##########################
+
+generate_dynamic_reconfigure_options(
+        cfg/planner_configuration.cfg
+)
+
+add_executable(planner_node src/planner/planner_node.cpp)
+add_dependencies(planner_node ${PROJECT_NAME}_gencfg)
+
+target_link_libraries(planner_node
+        ${catkin_LIBRAIRIES})
+
 ###################################
 ## catkin specific configuration ##
 ###################################

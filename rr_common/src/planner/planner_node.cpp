@@ -15,6 +15,9 @@
 #include <rr_msgs/speed.h>
 #include <rr_msgs/steering.h>
 
+#include <rr_common/PathPlanner.h>
+#include <dynamic_reconfigure/server.h>
+
 #include <rr_common/linear_tracking_filter.hpp>
 
 constexpr int ctrl_dim = 1;
@@ -161,8 +164,18 @@ void processMap() {
     }
 }
 
+void callback(rr_common::PathPlanner &config, uint32_t level) {
+    ROS_INFO("Reconfigure Request is happening")
+}
+
 int main(int argc, char** argv) {
     ros::init(argc, argv, "planner");
+
+    dynamic_reconfigure::Server<rr_common::PathPlanner> reconfigureServer;
+    dynamic_reconfigure::Server<rr_common::PathPlanner>::CallbackType f;
+
+    f = boost::bind(&callback, _1, _2);
+    reconfigureServer.setCallback(f);
 
     ros::NodeHandle nh;
     ros::NodeHandle nhp("~");
