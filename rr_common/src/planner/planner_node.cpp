@@ -15,7 +15,7 @@
 #include <rr_msgs/speed.h>
 #include <rr_msgs/steering.h>
 
-#include <rr_common/PathPlanner.h>
+#include <rr_common/planning/PathPlanner.h>
 #include <dynamic_reconfigure/server.h>
 
 #include <rr_common/linear_tracking_filter.hpp>
