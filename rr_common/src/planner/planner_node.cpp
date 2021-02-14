@@ -106,14 +106,21 @@ void processMap() {
         std::vector<double> map_costs = g_map_cost_interface->DistanceCost(path);
         double cost = 0;
         double inflator = 1;
+        double map_pct = 0, speed_pct = 0, steering_pct = 0, angle_pct = 0;
         for (size_t i = 0; i < rollout.path.size(); ++i) {
             cost *= gamma;
+            map_pct *= gamma;
+            speed_pct *= gamma;
+            steering_pct *= gamma;
+            angle_pct *= gamma;
             inflator *= gamma;
             if (map_costs[i] >= 0) {
-                cost += k_map_cost_ * map_costs[i];
-                cost += k_speed_ * std::pow(max_speed - path[i].speed, 2);
-                cost += k_steering_ * std::abs(path[i].steer);
-                cost += k_angle_ * std::abs(path[i].pose.theta);
+                cost += (k_map_cost_ * map_costs[i]) + (k_speed_ * std::pow(max_speed - path[i].speed, 2)) +
+                      (k_steering_ * std::abs(path[i].steer)) + (k_angle_ * std::abs(path[i].pose.theta));
+                map_pct += k_map_cost_ * map_costs[i];
+                speed_pct += k_speed_ * std::pow(max_speed - path[i].speed, 2);
+                steering_pct += k_steering_ * std::abs(path[i].steer);
+                angle_pct += k_angle_ * std::abs(path[i].pose.theta);
             } else {
                 cost += collision_penalty_ * (path.size() - i);
                 break;
@@ -195,7 +202,7 @@ int main(int argc, char** argv) {
     assertions::getParam(nhp, "k_speed", k_speed_);
     assertions::getParam(nhp, "k_steering", k_steering_);
     assertions::getParam(nhp, "k_angle", k_angle_);
-    assertions::getParam(nhl, "gamma", gamma);
+    assertions::getParam(nhp, "gamma", gamma);
     assertions::getParam(nhp, "collision_penalty", collision_penalty_);
 
     std::string map_type;
