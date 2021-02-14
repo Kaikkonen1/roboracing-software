@@ -27,7 +27,7 @@ std::unique_ptr<rr::EffectorTracker> g_effector_tracker;
 std::shared_ptr<rr::LinearTrackingFilter> g_speed_model;
 std::shared_ptr<rr::LinearTrackingFilter> g_steer_model;
 
-double k_map_cost_, k_speed_, k_steering_, k_angle_, collision_penalty_;
+double k_map_cost_, k_speed_, k_steering_, k_angle_, gamma, collision_penalty_;
 rr::Controls<ctrl_dim> g_last_controls;
 
 ros::Publisher speed_pub;
@@ -106,7 +106,6 @@ void processMap() {
         std::vector<double> map_costs = g_map_cost_interface->DistanceCost(path);
         double cost = 0;
         double inflator = 1;
-        double gamma = 1.01;
         for (size_t i = 0; i < rollout.path.size(); ++i) {
             cost *= gamma;
             inflator *= gamma;
@@ -196,6 +195,7 @@ int main(int argc, char** argv) {
     assertions::getParam(nhp, "k_speed", k_speed_);
     assertions::getParam(nhp, "k_steering", k_steering_);
     assertions::getParam(nhp, "k_angle", k_angle_);
+    assertions::getParam(nhl, "gamma", gamma);
     assertions::getParam(nhp, "collision_penalty", collision_penalty_);
 
     std::string map_type;
