@@ -27,7 +27,7 @@ std::unique_ptr<rr::EffectorTracker> g_effector_tracker;
 std::shared_ptr<rr::LinearTrackingFilter> g_speed_model;
 std::shared_ptr<rr::LinearTrackingFilter> g_steer_model;
 
-double k_map_cost_, k_speed_, k_steering_, k_angle_, gamma, collision_penalty_;
+double k_map_cost_, k_speed_, k_steering_, k_angle_, k_gamma, collision_penalty_;
 rr::Controls<ctrl_dim> g_last_controls;
 
 ros::Publisher speed_pub;
@@ -108,12 +108,12 @@ void processMap() {
         double inflator = 1;
         double map_pct = 0, speed_pct = 0, steering_pct = 0, angle_pct = 0;
         for (size_t i = 0; i < rollout.path.size(); ++i) {
-            cost *= gamma;
-            map_pct *= gamma;
-            speed_pct *= gamma;
-            steering_pct *= gamma;
-            angle_pct *= gamma;
-            inflator *= gamma;
+            cost *= k_gamma;
+            map_pct *= k_gamma;
+            speed_pct *= k_gamma;
+            steering_pct *= k_gamma;
+            angle_pct *= k_gamma;
+            inflator *= k_gamma;
             if (map_costs[i] >= 0) {
                 cost += (k_map_cost_ * map_costs[i]) + (k_speed_ * std::pow(max_speed - path[i].speed, 2)) +
                       (k_steering_ * std::abs(path[i].steer)) + (k_angle_ * std::abs(path[i].pose.theta));
@@ -125,6 +125,8 @@ void processMap() {
                 cost += collision_penalty_ * (path.size() - i);
                 break;
             }
+            ROS_INFO_STREAM("Map %: " << (map_pct / cost) << " / Speed %: " <<  (speed_pct / cost) <<
+                            " / Steering %: " << (steering_pct / cost) << " / Angle %: " << (angle_pct / cost));
         }
         return cost / inflator;
     };
@@ -202,7 +204,7 @@ int main(int argc, char** argv) {
     assertions::getParam(nhp, "k_speed", k_speed_);
     assertions::getParam(nhp, "k_steering", k_steering_);
     assertions::getParam(nhp, "k_angle", k_angle_);
-    assertions::getParam(nhp, "gamma", gamma);
+    assertions::getParam(nhp, "k_gamma", k_gamma);
     assertions::getParam(nhp, "collision_penalty", collision_penalty_);
 
     std::string map_type;
