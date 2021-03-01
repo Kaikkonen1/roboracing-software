@@ -27,7 +27,7 @@ std::unique_ptr<rr::EffectorTracker> g_effector_tracker;
 std::shared_ptr<rr::LinearTrackingFilter> g_speed_model;
 std::shared_ptr<rr::LinearTrackingFilter> g_steer_model;
 
-double k_map_cost_, k_speed_, k_steering_, k_angle_, k_gamma, collision_penalty_;
+double k_map_cost_, k_speed_, k_steering_, k_angle_, k_gamma_, collision_penalty_;
 rr::Controls<ctrl_dim> g_last_controls;
 
 ros::Publisher speed_pub;
@@ -95,40 +95,79 @@ void publish_path_viz(const std::vector<rr::PathPoint>& path_rollout) {
     viz_pub.publish(line_strip);
 }
 
-void processMap() {
-    auto max_speed = g_speed_model->GetValMax();
+double getMapCost(rr::TrajectoryRollout rollout, std::vector<double> map_costs) {
+    const auto& path = rollout.path;
+    double map_cost = 0;
+    double inflator = 1;
+    for (size_t i = 0; i < path.size(); ++i) {
+        map_cost *= k_gamma_;
+        inflator *= k_gamma_;
+        if (map_costs[i] >= 0) {
+            map_cost += k_map_cost_ * map_costs[i];
+        } else {
+            map_cost += collision_penalty_ * (path.size() - i);
+            break;
+        }
+    }
+    return map_cost / inflator;
+}
 
-    rr::CostFunction<ctrl_dim> cost_fn = [&](const rr::Controls<ctrl_dim>& controls) -> double {
+double getSpeedCost(rr::TrajectoryRollout rollout, std::vector<double> map_costs) {
+    const auto& path = rollout.path;
+    auto max_speed = g_speed_model->GetValMax();
+    double speed_cost = 0;
+    double inflator = 1;
+    for (size_t i = 0; i < path.size(); ++i) {
+        speed_cost *= k_gamma_;
+        inflator *= k_gamma_;
+        if (map_costs[i] >= 0) {
+            speed_cost += k_speed_ * std::pow(max_speed - path[i].speed, 2);
+        }
+    }
+    return speed_cost / inflator;
+}
+
+double getSteeringCost(rr::TrajectoryRollout rollout, std::vector<double> map_costs) {
+    const auto& path = rollout.path;
+    double steering_cost = 0;
+    double inflator = 1;
+    for (size_t i = 0; i < path.size(); ++i) {
+        steering_cost *= k_gamma_;
+        inflator *= k_gamma_;
+        if (map_costs[i] >= 0) {
+            steering_cost += k_steering_ * std::abs(path[i].steer);
+        }
+    }
+    return steering_cost / inflator;
+}
+
+double getAngleCost(rr::TrajectoryRollout rollout, std::vector<double> map_costs) {
+    const auto& path = rollout.path;
+    double angle_cost = 0;
+    double inflator = 1;
+    for (size_t i = 0; i < path.size(); ++i) {
+        angle_cost *= k_gamma_;
+        inflator *= k_gamma_;
+        if (map_costs[i] >= 0) {
+            angle_cost += k_angle_ * std::abs(path[i].pose.theta);
+        }
+    }
+    return angle_cost / inflator;
+}
+
+void processMap() {
+        rr::CostFunction<ctrl_dim> cost_fn = [&](const rr::Controls<ctrl_dim>& controls) -> double {
         rr::TrajectoryRollout rollout;
         g_vehicle_model->RollOutPath(controls, rollout);
-        const auto& path = rollout.path;
+        std::vector<double> map_costs = g_map_cost_interface->DistanceCost(rollout.path);
+        std::vector<double> total_costs;
 
-        std::vector<double> map_costs = g_map_cost_interface->DistanceCost(path);
-        double cost = 0;
-        double inflator = 1;
-        double map_pct = 0, speed_pct = 0, steering_pct = 0, angle_pct = 0;
-        for (size_t i = 0; i < rollout.path.size(); ++i) {
-            cost *= k_gamma;
-            map_pct *= k_gamma;
-            speed_pct *= k_gamma;
-            steering_pct *= k_gamma;
-            angle_pct *= k_gamma;
-            inflator *= k_gamma;
-            if (map_costs[i] >= 0) {
-                cost += (k_map_cost_ * map_costs[i]) + (k_speed_ * std::pow(max_speed - path[i].speed, 2)) +
-                      (k_steering_ * std::abs(path[i].steer)) + (k_angle_ * std::abs(path[i].pose.theta));
-                map_pct += k_map_cost_ * map_costs[i];
-                speed_pct += k_speed_ * std::pow(max_speed - path[i].speed, 2);
-                steering_pct += k_steering_ * std::abs(path[i].steer);
-                angle_pct += k_angle_ * std::abs(path[i].pose.theta);
-            } else {
-                cost += collision_penalty_ * (path.size() - i);
-                break;
-            }
-            ROS_INFO_STREAM("Map %: " << (map_pct / cost) << " / Speed %: " <<  (speed_pct / cost) <<
-                            " / Steering %: " << (steering_pct / cost) << " / Angle %: " << (angle_pct / cost));
-        }
-        return cost / inflator;
+        total_costs.push_back(getMapCost(rollout, map_costs));
+        total_costs.push_back(getSpeedCost(rollout, map_costs));
+        total_costs.push_back(getSteeringCost(rollout, map_costs));
+        total_costs.push_back(getAngleCost(rollout, map_costs));
+
+        return accumulate(total_costs.begin(), total_costs.end(), 0);
     };
 
     rr::Matrix<ctrl_dim, 2> ctrl_limits;
@@ -204,7 +243,7 @@ int main(int argc, char** argv) {
     assertions::getParam(nhp, "k_speed", k_speed_);
     assertions::getParam(nhp, "k_steering", k_steering_);
     assertions::getParam(nhp, "k_angle", k_angle_);
-    assertions::getParam(nhp, "k_gamma", k_gamma);
+    assertions::getParam(nhp, "k_gamma", k_gamma_);
     assertions::getParam(nhp, "collision_penalty", collision_penalty_);
 
     std::string map_type;
